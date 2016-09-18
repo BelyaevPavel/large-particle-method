@@ -1,4 +1,5 @@
 #pragma once
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <iostream>
 
@@ -8,6 +9,7 @@ class LPM
 	//Gas and particles constant parameters
 	double R; //Gas constant
 	double cp; //Gas heat capacity at constant pressure
+	double cv; //Gas heat capacity at constant volume
 	double c2; //Particles material heat capacity
 	double ro01; //Gas density
 	double ro02; //Particles density
@@ -37,10 +39,15 @@ class LPM
 	int loopCounter;
 	double t; //Current time
 	double tstop; //Calculation stop time
-	double LeftCellEnergyFlow;
-	double LeftCellVelocityFlow;
-	double ThisCellEnergyFlow;
-	double ThisCellVelocityFlow;
+	double gasLeftCellEnergyFlow;
+	double gasLeftCellVelocityFlow;
+	double gasThisCellEnergyFlow;
+	double gasThisCellVelocityFlow;
+	double particleLeftCellEnergyFlow;
+	double particleLeftCellVelocityFlow;
+	double particleThisCellEnergyFlow;
+	double particleThisCellVelocityFlow;
+	double Pr; //Prandtle value
 	//Grid parameters
 	int N; //Grid cells count
 	double Co; //Courant 
@@ -50,21 +57,36 @@ class LPM
 	double *U; //Solid phase (particles) velocity on current step
 	double *UIntermediate; //Solid phase (particles) velocity between steps
 	double *U1; //Solid phase (particles) velocity on next step
-	double *V; //Gas phase (particles) velocity on current step
-	double *VIntermediate; //Gas phase (particles) velocity between steps
-	double *V1; //Gas phase (particles) velocity on next step
-	double *E; //Gas phase (particles) energy on current step
-	double *EIntermediate; //Gas phase (particles) energy between steps
-	double *E1; //Gas phase (particles) energy on next step
-	double *P;  //Gas phase (particles) pressure on current step
+	double *V; //Gas phase velocity on current step
+	double *VIntermediate; //Gas phase velocity between steps
+	double *V1; //Gas phase velocity on next step
+	double *gasE; //Gas phase energy on current step
+	double *gasEIntermediate; //Gas phase energy between steps
+	double *gasE1; //Gas phase energy on next step
+	double *particleE; //Gas phase energy on current step
+	double *particleEIntermediate; //Gas phase energy between steps
+	double *particleE1; //Gas phase energy on next step
+	double *P; //Gas phase (particles) pressure on current step
 	double *PIntermediate; //Gas phase (particles) pressure between steps
 	double *P1; //Gas phase (particles) pressure on next step
-	double *Ro;  //Gas phase (particles) density on current step
-	double *Ro1;  //Gas phase (particles) density on next step
+	double *gasRo; //Gas phase density on current step
+	double *gasRo1; //Gas phase density on next step
+	double *particleRo; //Gas phase density on current step
+	double *particleRo1; //Gas phase density on next step
 	//Auxiliary arrays declaration
+	double *alpha; //Particles prcentege
+	double *Re; //Reynolds value
+	double *Nu; //Nuselt value
+	double *Cd; //Particle's dinamyc viscousity
+	double *f; //Interfactional interaction force
+	double *q; //Interfactional heat interaction
+	double *p_count; //Particles count
+	double *p_count1;
 	double *viscosity1; //Artificial viscosity
 	double *viscosity2; //Artificial viscosity
-	double *RightBorderMassFlow;
+	double *gasRightBorderMassFlow;
+	double *particleRightBorderMassFlow;
+	double *RightBorderParticleFlow;
 public:
 	double DefineFlowDirection(int index, double* IntermVelocity, int Border, double* Value);
 	double DefineRightBorderMassTranslation(double ThisCellVelocity, double RightCellVelocity, double ThisCellDensity, double RightCellDensity, double dt);
