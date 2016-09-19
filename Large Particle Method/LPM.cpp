@@ -65,6 +65,7 @@ LPM::LPM()
 	p_count1 = new double[N];
 	//Auxiliary arrays initialisation
 	alpha = new double[N];
+	eta = new double[N];
 	Re = new double[N];
 	Nu = new double[N];
 	Cd = new double[N];
@@ -102,15 +103,49 @@ LPM::LPM()
 			particleRo[i] = ro02 *(1 - alpha10);
 			gasE[i] = e0;
 			particleE[i] = c2*T0 + U[i] * U[i];
-			alpha[i] = 1 - alpha10;
+			alpha[i] = alpha10;
 		}
 		p_count[i] = 6 * (1 - alpha[i]) / M_PI;
+		eta[i] = gasRo[i] * alpha[i] / (gasRo[i] * alpha[i] + particleRo[i] * (1 - alpha[i]));
 	}
 }
 
 
 LPM::~LPM()
 {
+	delete[] U;
+	delete[] UIntermediate;
+	delete[] U1;
+	delete[] V;
+	delete[] VIntermediate;
+	delete[] V1;
+	delete[] gasE;
+	delete[] gasEIntermediate;
+	delete[] gasE1;
+	delete[] particleE;
+	delete[] particleEIntermediate ;
+	delete[] particleE1 ;
+	delete[] P;
+	delete[] PIntermediate ;
+	delete[] P1 ;
+	delete[] gasRo ;
+	delete[] gasRo1;
+	delete[] particleRo;
+	delete[] particleRo1 ;
+	delete[] p_count;
+	delete[] p_count1;
+	delete[] alpha ;
+	delete[] eta;
+	delete[] Re;
+	delete[] Nu;
+	delete[] Cd;
+	delete[] f;
+	delete[] q ;
+	delete[] viscosity1;
+	delete[] viscosity2;
+	delete[] gasRightBorderMassFlow;
+	delete[] particleRightBorderMassFlow;
+	delete[] RightBorderParticleFlow ;
 }
 
 
@@ -389,7 +424,7 @@ void LPM::MainProc()
 		particleRo = temp;
 
 		t += dt;
-		if (loopCounter % 10 == 0)
+		if (loopCounter % 50 == 0)
 			cout << loopCounter << " " << t << endl;
 	}
 

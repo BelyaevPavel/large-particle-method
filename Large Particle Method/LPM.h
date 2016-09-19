@@ -54,6 +54,7 @@ class LPM
 	double dx; //Grid step
 	double dt; //Time step
 	//Arrays declaration
+	double *mixtureVelocity;
 	double *U; //Solid phase (particles) velocity on current step
 	double *UIntermediate; //Solid phase (particles) velocity between steps
 	double *U1; //Solid phase (particles) velocity on next step
@@ -74,7 +75,8 @@ class LPM
 	double *particleRo; //Gas phase density on current step
 	double *particleRo1; //Gas phase density on next step
 	//Auxiliary arrays declaration
-	double *alpha; //Particles prcentege
+	double *alpha; //Gas proportion by volume
+	double *eta; //Gas proportion by mass
 	double *Re; //Reynolds value
 	double *Nu; //Nuselt value
 	double *Cd; //Particle's dinamyc viscousity
