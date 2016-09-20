@@ -10,15 +10,15 @@ LPM::LPM()
 	cv = cp / gamma;
 	c2 = 710;
 	ro01 = 1.21;
-	ro02 = 7800;
+	ro02 = 2500;
 	lambda1 = 0.026;
 	p0 = 0.1e6;
 	M = 4.2;
 	mu1 = 1.85e-5;
 	T0 = 293;
 	//Shielding layer constant parameters initialisation
-	alpha10 = 0.999;
-	d = 0.001;
+	alpha10 =0.99;
+	d = 0.0006;
 	lf = 0.5;
 	ls = 3;
 	lw = 3.5;
@@ -102,9 +102,9 @@ LPM::LPM()
 			particleRo[i] = ro02 *(1 - alpha10);
 			gasE[i] = e0;
 			particleE[i] = c2*T0 + U[i] * U[i];
-			alpha[i] = 1 - alpha10;
+			alpha[i] = alpha10;
 		}
-		p_count[i] = 6 * (1 - alpha[i]) / M_PI;
+		p_count[i] = 6 * (1 - alpha[i]) / (M_PI*d*d*d);
 	}
 }
 
@@ -299,7 +299,7 @@ void LPM::MainProc()
 
 			p_count1[i] = p_count[i] + (RightBorderParticleFlow[i - 1] - RightBorderParticleFlow[i]) / dx;
 
-			alpha[i] = 1 - p_count1[i] * M_PI*d*d*d;
+			alpha[i] = 1 - p_count1[i] * M_PI*d*d*d/6.0;
 		}
 		gasRo1[0] = gasRo1[1];
 		particleRo1[0] = particleRo1[1];
@@ -387,6 +387,10 @@ void LPM::MainProc()
 		temp = particleRo1;
 		particleRo1 = particleRo;
 		particleRo = temp;
+
+		temp = p_count1;
+		p_count1 = p_count;
+		p_count = p_count1;
 
 		t += dt;
 		if (loopCounter % 10 == 0)
