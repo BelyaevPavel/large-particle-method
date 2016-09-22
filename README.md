@@ -1,2 +1,2 @@
-# large-particles-method
-Method of "Large Particles" described by Belotsercovsky. C++ implementation.
+# Large-particle method
+Method of "Large Particle" described by Belotsercovsky (https://www.encyclopediaofmath.org/index.php/Large-particle_method). C++ implementation.
