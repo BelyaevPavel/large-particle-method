@@ -10,16 +10,16 @@ LPM::LPM()
 	cv = cp / gamma;
 	c2 = 710;
 	ro01 = 1.21;
-	ro02 = 2500;
+	ro02 = 7800;
 	lambda1 = 0.026;
 	p0 = 0.1e6;
 	M = 4.2;
 	mu1 = 1.85e-5;
 	T0 = 293;
 	//Shielding layer constant parameters initialisation
-	alpha10 =0.99;
-	d = 0.0006;
-	lf = 0.5;
+	alpha10 =0.999;
+	d = 0.00006;
+	lf = 0.45;
 	ls = 3;
 	lw = 3.5;
 	//Gas calculated parameters initialisation
@@ -27,7 +27,7 @@ LPM::LPM()
 	ro01f = (gamma + 1)*M*M / (2 + (gamma - 1)*M*M)*ro01;
 	a10 = sqrt(gamma*p0 / ro01);
 	a1 = sqrt(gamma*p1 / ro01f);
-	u1f = 2 / (gamma + 1)*(M - 1 / M)*a10;
+	u1f = (2.0 / (gamma + 1))*(M - 1.0 / M)*a10;
 	e0 = p0 / (ro01*(gamma - 1));
 	//Auxiliary variables initialisation
 	Pr = cp*mu1 / lambda1;
@@ -38,9 +38,9 @@ LPM::LPM()
 	tstop = 0.01;
 	//Grid parameters initialisation
 	N = 400;
-	Co = 0.3;
+	Co = 0.01;
 	dx = lw / N;
-	dt = Co*dx / (sqrt(u1f*u1f + a10*a10));
+	dt = Co*dx / (sqrt(u1f*u1f + a1*a1));
 	//Arrays initialisation
 	U = new double[N];
 	UIntermediate = new double[N];
@@ -76,13 +76,13 @@ LPM::LPM()
 	particleRightBorderMassFlow = new double[N];
 	RightBorderParticleFlow = new double[N];
 
-	for (int i = 0; i < N; i++)
+	for (int i = 1; i < N; i++)
 	{
 		if (i*dx < lf)
 		{
 			V[i] = u1f * (i*dx) / lf;
 			U[i] = 0;
-			xi = pow(1 - (gamma - 1)*(u1f - V[i]) / (2 * a10), 2 / (gamma - 1));
+			xi = pow(1 - (gamma - 1)*(u1f - V[i]) / (2 * a1), 2.0 / (gamma - 1));
 			P[i] = p1*pow(xi, gamma);
 			gasRo[i] = ro01f*xi;
 			particleRo[i] = 0;
@@ -100,12 +100,21 @@ LPM::LPM()
 			P[i] = 100000;
 			gasRo[i] = ro01*alpha10;
 			particleRo[i] = ro02 *(1 - alpha10);
-			gasE[i] = e0;
-			particleE[i] = c2*T0 + U[i] * U[i];
+			gasE[i] = P[i] / ((gamma - 1)*gasRo[i]) + V[i] * V[i] / 2.0;
+			particleE[i] = c2*T0 + U[i] * U[i]/2;
 			alpha[i] = alpha10;
 		}
 		p_count[i] = 6 * (1 - alpha[i]) / (M_PI*d*d*d);
 	}
+	V[0] = V[1];
+	U[0] = U[1];
+	P[0] = P[1];
+	gasRo[0] = gasRo[1];
+	particleRo[0] = particleRo[1];
+	gasE[0] = gasE[1];
+	particleE[0] = particleE[1];
+	alpha[0] = alpha[1];
+	p_count[0] = 6 * (1 - alpha[0]) / (M_PI*d*d*d);
 }
 
 
@@ -319,7 +328,7 @@ void LPM::MainProc()
 			particleThisCellVelocityFlow = DefineFlowDirection(i, UIntermediate, 1, UIntermediate);
 
 			gasE1[i] = gasRo[i] / gasRo1[i] * gasEIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellEnergyFlow * gasRightBorderMassFlow[i - 1] - gasThisCellEnergyFlow * gasRightBorderMassFlow[i]);
-			V1[i] = (gasRo[i] * dx) / (gasRo1[i] * dx)*VIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellVelocityFlow * gasRightBorderMassFlow[i - 1] - gasThisCellVelocityFlow * gasRightBorderMassFlow[i]);
+			V1[i] = gasRo[i] / gasRo1[i]*VIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellVelocityFlow * gasRightBorderMassFlow[i - 1] - gasThisCellVelocityFlow * gasRightBorderMassFlow[i]);
 
 			if (p_count[i] <= 1e-50)
 			{
@@ -393,7 +402,7 @@ void LPM::MainProc()
 		p_count = p_count1;
 
 		t += dt;
-		if (loopCounter % 10 == 0)
+		if (loopCounter % 100 == 0||P[int(1.5/dx)]-p0>p0*0.1)
 			cout << loopCounter << " " << t << endl;
 	}
 
