@@ -210,6 +210,15 @@ double LPM::DefineRightBorderMassTranslation(double ThisCellVelocity, double Rig
 	return 0;
 }
 
+void LPM::FileOutput(int N, double *Value, double dx, string ValueName, string Aux)
+{
+	ofstream out(".\\LPM_Output\\"+ValueName + Aux + ".txt");
+	for (int i = 0; i < N; i++)
+	{
+		out <<i*dx<<" "<< Value[i] << endl;
+	}
+}
+
 void LPM::MainProc()
 {
 	//Local auxiliary arrays declaration
@@ -338,7 +347,7 @@ void LPM::MainProc()
 
 			// VIntermediate[i] = V[i] - dP1[i] - df1[i] * dV[i];
 
-			VIntermediate[i] = V[i] - dt / gasRo[i] * ((gasPIntermediate[i] - gasPIntermediate[i - 1] + gasF_05[i] - gasF_05[i - 1]) / dx - gasR[i]);
+			VIntermediate[i] = V[i] - dt / gasRo[i] * (((gasAlpha_05[i] - gasAlpha_05[i - 1])*(gasP[i] + gasF[i]) + alpha[i] * (gasP_05[i] - gasP_05[i - 1] + gasF_05[i] - gasF_05[i - 1])) / dx - alpha[i] * gasR[i]);
 
 			if (p_count[i] > 1e-50)
 				UIntermediate[i] = U[i] - dt / particleRo[i] * ((particleP_05[i] - particleP_05[i - 1] + particleF_05[i] - particleF_05[i - 1]) / dx - particleR[i]);
@@ -352,7 +361,7 @@ void LPM::MainProc()
 
 		for (int i = 1; i < N - 1; i++)
 		{
-			gasEIntermediate[i] = ((gasE[i] - V[i] * V[i] / 2.0) + V[i] - VIntermediate[i] - dt / (alpha[i] * gasRo[i])*(1 / dx*(alpha[i] * (V_05[i] - V_05[i - 1])*(gasF[i] + gasP[i]) + (gasAlpha_05[i] - gasAlpha_05[i - 1])*(gasQ[i] + gasF[i] * V[i] + gasP[i] * V[i]) + V[i] * alpha[i] * (gasF_05[i] - gasF_05[i - 1] + gasP_05[i] - gasP_05[i - 1]) + alpha[i] * (gasQ_05[i] - gasQ_05[i - 1])) - gasR[i] * (V[i] + U[i]) / 2.0)) + VIntermediate[i] * VIntermediate[i] * 0.5;
+			gasEIntermediate[i] = gasE[i] - dt / gasRo[i] * (1 / dx*((gasAlpha_05[i] - gasAlpha_05[i - 1])*(gasQ[i] + gasF[i] * V[i] + gasP[i] * V[i]) + alpha[i] * ((V_05[i] - V_05[i - 1])*(gasF[i] + gasP[i]) + V[i] * (gasF_05[i] - gasF_05[i - 1] + gasP_05[i] - gasP_05[i - 1]) + (gasQ_05[i] - gasQ_05[i - 1]))) + (alpha[i] * gasFi[i] + gasR[i] * (V[i] + U[i]) / 2.0));
 			//gasEIntermediate[i] = gasE[i] + ((particleE[i] - particleEIntermediate[i])*particleRo[i] - ((gasPIntermediate[i] + viscosity1[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i + 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i + 1]) / 2) - (gasPIntermediate[i - 1] + viscosity2[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i - 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i - 1]) / 2))*(dt / dx)) / gasRo[i];
 
 			if (gasEIntermediate[i] < 0)
@@ -506,8 +515,14 @@ void LPM::MainProc()
 		p_count1 = p_count;
 		p_count = temp;
 
+		if (t > 0.0015)
+		{
+			FileOutput(N, gasP, dx, "gasP", "t=0.0015");
+			break;
+		}
+
 		t += dt;
-		if (loopCounter % 50 == 0)
+		if (loopCounter % 500 == 0)
 			cout << loopCounter << " " << t << endl;
 	}
 

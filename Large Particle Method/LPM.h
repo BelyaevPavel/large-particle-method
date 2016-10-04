@@ -2,6 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 class LPM
@@ -114,6 +115,7 @@ public:
 	double DefineFlowDirection(int index, double* IntermVelocity, int Border, double* Value);
 	double DefineRightBorderMassTranslation(double ThisCellVelocity, double RightCellVelocity, double ThisCellDensity, double RightCellDensity, double dt);
 	void MainProc();
+	void FileOutput(int N, double *Value, double dx, string ValueName, string Aux);
 	LPM();
 	~LPM();
 };
