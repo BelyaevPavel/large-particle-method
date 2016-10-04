@@ -54,27 +54,48 @@ class LPM
 	double dx; //Grid step
 	double dt; //Time step
 	//Arrays declaration
-	double *mixtureVelocity;
+	double *envVelocity;
 	double *U; //Solid phase (particles) velocity on current step
 	double *UIntermediate; //Solid phase (particles) velocity between steps
 	double *U1; //Solid phase (particles) velocity on next step
 	double *V; //Gas phase velocity on current step
 	double *VIntermediate; //Gas phase velocity between steps
 	double *V1; //Gas phase velocity on next step
+	double *envE;
 	double *gasE; //Gas phase energy on current step
 	double *gasEIntermediate; //Gas phase energy between steps
 	double *gasE1; //Gas phase energy on next step
 	double *particleE; //Gas phase energy on current step
 	double *particleEIntermediate; //Gas phase energy between steps
 	double *particleE1; //Gas phase energy on next step
-	double *P; //Gas phase (particles) pressure on current step
-	double *PIntermediate; //Gas phase (particles) pressure between steps
-	double *P1; //Gas phase (particles) pressure on next step
+	double *envPressure;
+	double *gasP; //Gas phase (particles) pressure on current step
+	double *gasPIntermediate; //Gas phase (particles) pressure between steps
+	double *gasP1; //Gas phase (particles) pressure on next step
+	double *particleP; //Gas phase (particles) pressure on current step
+	double *particlePIntermediate; //Gas phase (particles) pressure between steps
+	double *particleP1; //Gas phase (particles) pressure on next step
+	double *envRo;
 	double *gasRo; //Gas phase density on current step
 	double *gasRo1; //Gas phase density on next step
 	double *particleRo; //Gas phase density on current step
 	double *particleRo1; //Gas phase density on next step
+	double *mixtureS;
+	double *gasS;
+	double *particleS;
 	//Auxiliary arrays declaration
+	double *envR;
+	double *gasR;
+	double *particleR;
+	double *envQ;
+	double *gasQ;
+	double *particleQ;
+	double *envF;
+	double *gasF;
+	double *particleF;
+	double *envFi;
+	double *gasFi;
+	double *particleFi;
 	double *alpha; //Gas proportion by volume
 	double *eta; //Gas proportion by mass
 	double *Re; //Reynolds value

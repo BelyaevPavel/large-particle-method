@@ -17,7 +17,7 @@ LPM::LPM()
 	mu1 = 1.85e-5;
 	T0 = 293;
 	//Shielding layer constant parameters initialisation
-	alpha10 = 0.999;
+	alpha10 = 1;
 	d = 0.001;
 	lf = 0.5;
 	ls = 3;
@@ -38,32 +38,54 @@ LPM::LPM()
 	tstop = 0.01;
 	//Grid parameters initialisation
 	N = 400;
-	Co = 0.3;
+	Co = 0.01;
 	dx = lw / N;
-	dt = Co*dx / (sqrt(u1f*u1f + a10*a10));
+	dt = Co*dx / (sqrt(u1f*u1f + a1*a1));
 	//Arrays initialisation
+	envVelocity = new double[N];
 	U = new double[N];
 	UIntermediate = new double[N];
 	U1 = new double[N];
 	V = new double[N];
 	VIntermediate = new double[N];
 	V1 = new double[N];
+	envE = new double[N];
 	gasE = new double[N];
 	gasEIntermediate = new double[N];
 	gasE1 = new double[N];
 	particleE = new double[N];
 	particleEIntermediate = new double[N];
 	particleE1 = new double[N];
-	P = new double[N];
-	PIntermediate = new double[N];
-	P1 = new double[N];
+	envPressure = new double[N];
+	gasP = new double[N];
+	gasPIntermediate = new double[N];
+	gasP1 = new double[N];
+	particleP = new double[N];
+	particlePIntermediate = new double[N];
+	particleP1 = new double[N];
+	envRo = new double[N];
 	gasRo = new double[N];
 	gasRo1 = new double[N];
 	particleRo = new double[N];
 	particleRo1 = new double[N];
 	p_count = new double[N];
 	p_count1 = new double[N];
+	mixtureS = new double[N];
+	gasS = new double[N];
+	particleS = new double[N];
 	//Auxiliary arrays initialisation
+	envR = new double[N];
+	gasR = new double[N];
+	particleR = new double[N];
+	envQ = new double[N];
+	gasQ = new double[N];
+	particleQ = new double[N];
+	envF = new double[N];
+	gasF = new double[N];
+	particleF = new double[N];
+	envFi = new double[N];
+	gasFi = new double[N];
+	particleFi = new double[N];
 	alpha = new double[N];
 	eta = new double[N];
 	Re = new double[N];
@@ -81,16 +103,17 @@ LPM::LPM()
 	{
 		if (i*dx < lf)
 		{
-			V[i] = u1f * (i*dx) / lf;
+			//V[i] = u1f * (i*dx) / lf;
+			//xi = pow(1 - (gamma - 1)*(u1f - V[i]) / (2 * a1), 2 / (gamma - 1));
+			//envPressure[i] = p1*pow(xi, gamma);
+			//gasRo[i] = ro01f*xi;
+			envPressure[i] = p1;
+			V[i] = u1f;
+			gasP[i] = p1;
+			gasRo[i] = ro01f;
 			U[i] = 0;
-			xi = pow(1 - (gamma - 1)*(u1f - V[i]) / (2 * a10), 2 / (gamma - 1));
-			P[i] = p1*pow(xi, gamma);
-			gasRo[i] = ro01f*xi;
 			particleRo[i] = 0;
-			//V[i] = u1f;
-			//P[i] = p1;
-			//gasRo[i] = ro01f;
-			gasE[i] = P[i] / ((gamma - 1)*gasRo[i]) + V[i] * V[i] / 2.0;
+			gasE[i] = envPressure[i] / ((gamma - 1)*gasRo[i]) + V[i] * V[i] / 2.0;
 			particleE[i] = 0;
 			alpha[i] = 1;
 		}
@@ -98,15 +121,20 @@ LPM::LPM()
 		{
 			V[i] = 0;
 			U[i] = 0;
-			P[i] = 100000;
+			envPressure[i] = 100000;
 			gasRo[i] = ro01*alpha10;
 			particleRo[i] = ro02 *(1 - alpha10);
 			gasE[i] = e0;
 			particleE[i] = c2*T0 + U[i] * U[i];
 			alpha[i] = alpha10;
 		}
-		p_count[i] = 6 * (1 - alpha[i]) / M_PI;
+		p_count[i] = 6 * (1 - alpha[i]) / (M_PI*d*d*d);
 		eta[i] = gasRo[i] * alpha[i] / (gasRo[i] * alpha[i] + particleRo[i] * (1 - alpha[i]));
+		gasP[i] = alpha[i] * envPressure[i];
+		particleP[i] = (1 - alpha[i]) * envPressure[i];
+		envVelocity[i] = eta[i] * V[i] + (1 - eta[i])*U[i];
+		envE[i] = eta[i] * (gasP[i] / ((gamma - 1)*gasRo[i]) + 0.5*(envVelocity[i] - V[i])*(envVelocity[i] - V[i])) + (1 - eta[i])* (c2*T0 + 0.5*(envVelocity[i] - U[i])*(envVelocity[i] - U[i]));
+		envRo[i] = alpha[i] * gasRo[i] + (1 - alpha[i])*particleRo[i];
 	}
 }
 
@@ -123,29 +151,29 @@ LPM::~LPM()
 	delete[] gasEIntermediate;
 	delete[] gasE1;
 	delete[] particleE;
-	delete[] particleEIntermediate ;
-	delete[] particleE1 ;
-	delete[] P;
-	delete[] PIntermediate ;
-	delete[] P1 ;
-	delete[] gasRo ;
+	delete[] particleEIntermediate;
+	delete[] particleE1;
+	delete[] gasP;
+	delete[] gasPIntermediate;
+	delete[] gasP1;
+	delete[] gasRo;
 	delete[] gasRo1;
 	delete[] particleRo;
-	delete[] particleRo1 ;
+	delete[] particleRo1;
 	delete[] p_count;
 	delete[] p_count1;
-	delete[] alpha ;
+	delete[] alpha;
 	delete[] eta;
 	delete[] Re;
 	delete[] Nu;
 	delete[] Cd;
 	delete[] f;
-	delete[] q ;
+	delete[] q;
 	delete[] viscosity1;
 	delete[] viscosity2;
 	delete[] gasRightBorderMassFlow;
 	delete[] particleRightBorderMassFlow;
-	delete[] RightBorderParticleFlow ;
+	delete[] RightBorderParticleFlow;
 }
 
 
@@ -189,8 +217,14 @@ void LPM::MainProc()
 	double *particleAlpha_05 = new double[N];
 	double *p_count_05 = new double[N];
 	double *q_05 = new double[N];
-	double *f_05 = new double[N];;
-	double *V_05 = new double[N];;
+	double *f_05 = new double[N];
+	double *gasF_05 = new double[N];
+	double *particleF_05 = new double[N];
+	double *gasQ_05 = new double[N];
+	double *particleQ_05 = new double[N];
+	double *gasP_05 = new double[N];
+	double *particleP_05 = new double[N];
+	double *V_05 = new double[N];
 	double *U_05 = new double[N];
 	double *dP1 = new double[N];
 	double *dP2 = new double[N];
@@ -207,12 +241,12 @@ void LPM::MainProc()
 		for (int i = 1; i < N - 1; i++)
 		{
 			if (V[i + 1]<V[i])
-				viscosity1[i] = ((gasRo[i + 1] + gasRo[i]) / 2)*(a*sqrt(1.4*(P[i + 1] + P[i]) / (gasRo[i + 1] + gasRo[i])) + b*(V[i] - V[i + 1]))*(V[i] - V[i + 1]);
+				viscosity1[i] = ((gasRo[i + 1] + gasRo[i]) / 2)*(a*sqrt(1.4*(gasP[i + 1] + gasP[i]) / (gasRo[i + 1] + gasRo[i])) + b*(V[i] - V[i + 1]))*(V[i] - V[i + 1]);
 			else
 				viscosity1[i] = 0;
 
 			if (V[i - 1]>V[i])
-				viscosity2[i] = -((gasRo[i - 1] + gasRo[i]) / 2)*(a*sqrt(1.4*(P[i - 1] + P[i]) / (gasRo[i - 1] + gasRo[i])) - b*(V[i] - V[i - 1]))*(V[i] - V[i - 1]);
+				viscosity2[i] = -((gasRo[i - 1] + gasRo[i]) / 2)*(a*sqrt(1.4*(gasP[i - 1] + gasP[i]) / (gasRo[i - 1] + gasRo[i])) - b*(V[i] - V[i - 1]))*(V[i] - V[i - 1]);
 			else
 				viscosity2[i] = 0;
 		}
@@ -228,6 +262,16 @@ void LPM::MainProc()
 			Cd[i] = 0.42*fabs(V[i] - U[i]) + (1 - alpha[i])*mu1 / (gasRo[i] * d)*(24 + 4.4*mu1*sqrt(fabs(V[i] - U[i]))*sqrt(gasRo[i] * d / (alpha[i] * mu1)));
 			f[i] = M_PI*d*d*Cd[i] * (gasRo[i] / alpha[i]);
 			q[i] = M_PI*d*lambda1*Nu[i] * ((gasE[i] - V[i] * V[i] / 2.0) / cv - (particleE[i] - V[i] * V[i] / 2.0) / c2);
+			gasR[i] = (1 - alpha[i])*f[i];
+			particleR[i] = -alpha[i] * f[i];
+			gasFi[i] = (1 - alpha[i])*q[i];
+			particleFi[i] = -alpha[i] * q[i];
+			gasF[i] = -0.5*gasRo[i] * (envVelocity[i] - V[i])*(envVelocity[i] - V[i]);
+			particleF[i] = -0.5*particleRo[i] * (envVelocity[i] - U[i])*(envVelocity[i] - U[i]);
+			envF[i] = -(alpha[i] * gasF[i] + (1 - alpha[i])*particleF[i]);
+			gasQ[i] = 0.5*(envVelocity[i] - V[i])*(gasP[i] + gasRo[i] * gasE[i]);
+			particleQ[i] = 0.5*(envVelocity[i] - U[i])*(particleP[i] + particleRo[i] * particleE[i]);
+			envQ[i] = -(alpha[i] * gasQ[i] + (1 - alpha[i])*particleQ[i]);
 		}
 		// Intercellar values calc
 		for (int i = 0; i < N - 1; i++)
@@ -237,82 +281,93 @@ void LPM::MainProc()
 			p_count_05[i] = (p_count[i] + p_count[i + 1]) / 2.0;
 			q_05[i] = (q[i] + q[i + 1]) / 2.0;
 			f_05[i] = (f[i] + f[i + 1]) / 2.0;
+			gasF_05[i] = (gasF[i] + gasF[i + 1]) / 2.0;
+			particleF_05[i] = (particleF[i] + particleF[i + 1]) / 2.0;
+			gasQ_05[i] = (gasQ[i] + gasQ[i + 1]) / 2.0;
+			particleQ_05[i] = (particleQ[i] + particleQ[i + 1]) / 2.0;
 			V_05[i] = (V[i] + V[i + 1]) / 2.0;
 			U_05[i] = (U[i] + U[i + 1]) / 2.0;
+			gasP_05[i] = (gasP[i] + gasP[i + 1]) / 2.0;
+			particleP_05[i] = (particleP[i] + particleP[i + 1]) / 2.0;
 		}
-		// Pressure and force delta
-		for (int i = 1; i < N - 1; i++)
-		{
-			dP1[i] = (PIntermediate[i] - PIntermediate[i - 1] + viscosity1[i] - viscosity2[i])*dt / (dx*(gasRo[i] / alpha[i]));
-			df1[i] = p_count[i] / gasRo[i] * M_PI*d*d*(gasRo[i] / alpha[i])*Cd[i] * dt / 8.0;
-
-			if (p_count[i] <= 1e-50)
-			{
-				dP2[i] = 0;
-				df2[i] = 0;
-			}
-			else
-			{
-				dP2[i] = 1.0 / (particleRo[i] / (1 - alpha[i]))*(PIntermediate[i] - PIntermediate[i - 1] + viscosity1[i] - viscosity2[i])*dt / dx;
-				df2[i] = -p_count[i] / particleRo[i] * M_PI*d*d*(gasRo[i] / alpha[i])*Cd[i] * dt / 8.0;
-			}
-		}
-
-		dP1[0] = dP1[1];
-		dP1[N - 1] = dP1[N - 2];
-
-		dP2[0] = dP2[1];
-		dP2[N - 1] = dP2[N - 2];
-
-		df1[0] = df1[1];
-		df1[N - 1] = df1[N - 2];
-
-		df2[0] = df2[1];
-		df2[N - 1] = df2[N - 2];
 		// Intermediate pressure calculation.
 		for (int i = 0; i < N - 1; i++)
 		{
-			PIntermediate[i] = (P[i + 1] + P[i]) / 2.0;
-			if (PIntermediate[i] < 0)
-				cout << loopCounter << "Fail." << endl;
+			gasPIntermediate[i] = (gasP[i + 1] + gasP[i]) / 2.0;
+			if (gasPIntermediate[i] < 0)
+				cout << loopCounter << "gas Fail." << endl;
+			particlePIntermediate[i] = (particleP[i + 1] + particleP[i]) / 2.0;
+			if (particlePIntermediate[i] < 0)
+				cout << loopCounter << "particle Fail." << endl;
 		}
-		PIntermediate[N - 1] = PIntermediate[N - 2];
+		gasPIntermediate[N - 1] = gasPIntermediate[N - 2];
+		particlePIntermediate[N - 1] = particlePIntermediate[N - 2];
+		// Pressure and force delta
+		//for (int i = 1; i < N - 1; i++)
+		//{
+		//	dP1[i] = (gasPIntermediate[i] - gasPIntermediate[i - 1] + viscosity1[i] - viscosity2[i])*dt / (dx*(gasRo[i] / alpha[i]));
+		//	df1[i] = p_count[i] / gasRo[i] * M_PI*d*d*(gasRo[i] / alpha[i])*Cd[i] * dt / 8.0;
+
+		//	if (p_count[i] <= 1e-50)
+		//	{
+		//		dP2[i] = 0;
+		//		df2[i] = 0;
+		//	}
+		//	else
+		//	{
+		//		dP2[i] = 1.0 / (particleRo[i] / (1 - alpha[i]))*(gasPIntermediate[i] - gasPIntermediate[i - 1] + viscosity1[i] - viscosity2[i])*dt / dx;
+		//		df2[i] = -p_count[i] / particleRo[i] * M_PI*d*d*(gasRo[i] / alpha[i])*Cd[i] * dt / 8.0;
+		//	}
+		//}
+
+		//dP1[0] = dP1[1];
+		//dP1[N - 1] = dP1[N - 2];
+
+		//dP2[0] = dP2[1];
+		//dP2[N - 1] = dP2[N - 2];
+
+		//df1[0] = df1[1];
+		//df1[N - 1] = df1[N - 2];
+
+		//df2[0] = df2[1];
+		//df2[N - 1] = df2[N - 2];
 		// Intermediate velocity calculation.
 		for (int i = 1; i < N - 1; i++)
 		{
-			dV[i] = ((V[i] - U[i]) - (dP1[i] - dP2[i])) / (1 - (-df1[i] + df2[i]));
+			// dV[i] = ((V[i] - U[i]) - (dP1[i] - dP2[i])) / (1 - (-df1[i] + df2[i]));
 
-			VIntermediate[i] = V[i] - dP1[i] - df1[i] * dV[i];
+			// VIntermediate[i] = V[i] - dP1[i] - df1[i] * dV[i];
 
-			UIntermediate[i] = U[i] - dP2[i] - df2[i] * dV[i];
+			VIntermediate[i] = V[i] - dt / gasRo[i] * ((gasPIntermediate[i] - gasPIntermediate[i - 1] + gasF_05[i] - gasF_05[i - 1]) / dx - gasR[i]);
+
+			if (p_count[i] > 1e-50)
+				UIntermediate[i] = U[i] - dt / particleRo[i] * ((particleP_05[i] - particleP_05[i - 1] + particleF_05[i] - particleF_05[i - 1]) / dx - particleR[i]);
+			else
+				UIntermediate[i] = 0;
 		}
 		VIntermediate[0] = VIntermediate[1];
 		VIntermediate[N - 1] = -VIntermediate[N - 2];
 		UIntermediate[0] = UIntermediate[1];
 		UIntermediate[N - 1] = UIntermediate[N - 2];
-		// Intermediate energy calculation
-		for (int i = 1; i < N - 1; i++)
-		{
-			if (p_count[i] <= 1e-50)
-				particleEIntermediate[i] = 0;
-			else
-				particleEIntermediate[i] = ((particleE[i] - U[i] * U[i] / 2.0) + 1.0 / particleRo[i] * p_count[i] * q[i] * dt) + UIntermediate[i] * UIntermediate[i] / 2.0;
-
-			if (particleEIntermediate[i] < 0)
-				cout << loopCounter << "Fail." << endl;
-		}
-		particleEIntermediate[0] = particleEIntermediate[1];
-		particleEIntermediate[N - 1] = particleEIntermediate[N - 2];
 
 		for (int i = 1; i < N - 1; i++)
 		{
-			gasEIntermediate[i] = gasE[i] + ((particleE[i] - particleEIntermediate[i])*particleRo[i] - ((PIntermediate[i] + viscosity1[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i + 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i + 1]) / 2) - (PIntermediate[i - 1] + viscosity2[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i - 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i - 1]) / 2))*(dt / dx)) / gasRo[i];
+			gasEIntermediate[i] = ((gasE[i] - V[i] * V[i] / 2.0) + V[i] - VIntermediate[i] - dt / (alpha[i] * gasRo[i])*(1 / dx*(alpha[i] * (V_05[i] - V_05[i - 1])*(gasF[i] + gasP[i]) + (gasAlpha_05[i] - gasAlpha_05[i - 1])*(gasQ[i] + gasF[i] * V[i] + gasP[i] * V[i]) + V[i] * alpha[i] * (gasF_05[i] - gasF_05[i - 1] + gasP_05[i] - gasP_05[i - 1]) + alpha[i] * (gasQ_05[i] - gasQ_05[i - 1])) - gasR[i] * (V[i] + U[i]) / 2.0)) + VIntermediate[i] * VIntermediate[i] * 0.5;
+			//gasEIntermediate[i] = gasE[i] + ((particleE[i] - particleEIntermediate[i])*particleRo[i] - ((gasPIntermediate[i] + viscosity1[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i + 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i + 1]) / 2) - (gasPIntermediate[i - 1] + viscosity2[i])*(gasAlpha_05[i] * (VIntermediate[i] + VIntermediate[i - 1]) / 2 + particleAlpha_05[i] * (UIntermediate[i] + UIntermediate[i - 1]) / 2))*(dt / dx)) / gasRo[i];
 
 			if (gasEIntermediate[i] < 0)
+				cout << loopCounter << "Fail." << endl;
+			if (p_count[i]>1e-50)
+				particleEIntermediate[i] = ((particleE[i] - U[i] * U[i] / 2.0) + U[i] - UIntermediate[i] - dt / ((1 - alpha[i]) * particleRo[i])*(1 / dx*((1 - alpha[i]) * (U_05[i] - U_05[i - 1])*(particleF[i] + particleP[i]) + (particleAlpha_05[i] - particleAlpha_05[i - 1])*(particleQ[i] + particleF[i] * U[i] + particleP[i] * U[i]) + U[i] * (1 - alpha[i]) * (particleF_05[i] - particleF_05[i - 1] + particleP_05[i] - particleP_05[i - 1]) + (1 - alpha[i]) * (particleQ_05[i] - particleQ_05[i - 1])) - particleR[i] * (V[i] + U[i]) / 2.0)) + UIntermediate[i] * UIntermediate[i] * 0.5;
+			else
+				particleEIntermediate[i] = 0;
+			if (particleEIntermediate[i] < 0)
 				cout << loopCounter << "Fail." << endl;
 		}
 		gasEIntermediate[0] = gasEIntermediate[1];
 		gasEIntermediate[N - 1] = gasEIntermediate[N - 2];
+		particleEIntermediate[0] = particleEIntermediate[1];
+		particleEIntermediate[N - 1] = particleEIntermediate[N - 2];
 		// Calculation of mass flow through right cell border
 		for (int i = 0; i < N - 1; i++)
 		{
@@ -322,9 +377,9 @@ void LPM::MainProc()
 
 			RightBorderParticleFlow[i] = DefineRightBorderMassTranslation(UIntermediate[i], UIntermediate[i + 1], p_count[i], p_count[i + 1], dt);
 		}
-		RightBorderParticleFlow[N] = 0;
-		gasRightBorderMassFlow[N] = 0;
-		particleRightBorderMassFlow[N] = 0;
+		RightBorderParticleFlow[N - 1] = 0;
+		gasRightBorderMassFlow[N - 1] = gasRightBorderMassFlow[N - 2];
+		particleRightBorderMassFlow[N - 1] = 0;
 		// Next time step density calculation
 		for (int i = 1; i < N; i++)
 		{
@@ -334,7 +389,7 @@ void LPM::MainProc()
 
 			p_count1[i] = p_count[i] + (RightBorderParticleFlow[i - 1] - RightBorderParticleFlow[i]) / dx;
 
-			alpha[i] = 1 - p_count1[i] * M_PI*d*d*d;
+			alpha[i] = 1 - p_count1[i] * M_PI*d*d*d / 6.0;
 		}
 		gasRo1[0] = gasRo1[1];
 		particleRo1[0] = particleRo1[1];
@@ -354,7 +409,7 @@ void LPM::MainProc()
 			particleThisCellVelocityFlow = DefineFlowDirection(i, UIntermediate, 1, UIntermediate);
 
 			gasE1[i] = gasRo[i] / gasRo1[i] * gasEIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellEnergyFlow * gasRightBorderMassFlow[i - 1] - gasThisCellEnergyFlow * gasRightBorderMassFlow[i]);
-			V1[i] = (gasRo[i] * dx) / (gasRo1[i] * dx)*VIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellVelocityFlow * gasRightBorderMassFlow[i - 1] - gasThisCellVelocityFlow * gasRightBorderMassFlow[i]);
+			V1[i] = gasRo[i] / gasRo1[i] * VIntermediate[i] + (1.0 / (gasRo1[i] * dx))*(gasLeftCellVelocityFlow * gasRightBorderMassFlow[i - 1] - gasThisCellVelocityFlow * gasRightBorderMassFlow[i]);
 
 			if (p_count[i] <= 1e-50)
 			{
@@ -367,9 +422,14 @@ void LPM::MainProc()
 				U1[i] = particleRo[i] / particleRo1[i] * UIntermediate[i] + (1.0 / (particleRo1[i] * dx))*(particleLeftCellVelocityFlow * particleRightBorderMassFlow[i - 1] - particleThisCellVelocityFlow * particleRightBorderMassFlow[i]);
 			}
 
-			P1[i] = gasRo1[i] * (gasE1[i] - V1[i] * V1[i] / 2.0)*0.4;
-			//if (V1[i] < 0)
-			//	cout << loopCounter << "Fail." << endl;
+			gasP1[i] = gasRo1[i] * (gasE1[i] - V1[i] * V1[i] / 2.0)*0.4;
+			particleP1[i] = gasP1[i] / alpha[i] * (1 - alpha[i]);
+
+			//Enviremental values recalculate:
+			envPressure[i] = alpha[i] * gasP[i] + (1 - alpha[i])*particleP[i];
+			envRo[i] = alpha[i] * gasRo[i] + (1 - alpha[i])*particleRo[i];
+			envVelocity[i] = eta[i] * V[i] + (1 - eta[i])*U[i];
+			envE[i] = eta[i] * (gasE1[i] + 0.5*(envVelocity[i] - V[i])*(envVelocity[i] - V[i])) + (1 - eta[i])* (particleE[i] + 0.5*(envVelocity[i] - U[i])*(envVelocity[i] - U[i]));
 		}
 
 		gasE1[0] = gasE1[1];
@@ -378,14 +438,29 @@ void LPM::MainProc()
 		particleE1[0] = particleE1[1];
 		particleE1[N - 1] = particleE1[N - 2];
 
-		P1[0] = P1[1];
-		P1[N - 1] = P1[N - 2];
+		gasP1[0] = gasP1[1];
+		gasP1[N - 1] = gasP1[N - 2];
+
+		particleP1[0] = particleP1[1];
+		particleP1[N - 1] = particleP1[N - 2];
 
 		V1[0] = V1[1];
 		V1[N - 1] = -V1[N - 2];
 
 		U1[0] = U1[1];
 		U1[N - 1] = U1[N - 2];
+
+		envE[0] = envE[1];
+		envE[N - 1] = envE[N - 2];
+
+		envPressure[0] = envPressure[1];
+		envPressure[N - 1] = envPressure[N - 2];
+
+		envRo[0] = envRo[1];
+		envRo[N - 1] = envRo[N - 2];
+
+		envVelocity[0] = envVelocity[1];
+		envVelocity[N - 1] = envVelocity[N - 2];
 
 		gasRo1[N - 1] = gasRo1[N - 2];
 
@@ -403,9 +478,13 @@ void LPM::MainProc()
 		particleE1 = particleE;
 		particleE = temp;
 
-		temp = P1;
-		P1 = P;
-		P = temp;
+		temp = gasP1;
+		gasP1 = gasP;
+		gasP = temp;
+
+		temp = particleP1;
+		particleP1 = particleP;
+		particleP = temp;
 
 		temp = V1;
 		V1 = V;
@@ -422,6 +501,10 @@ void LPM::MainProc()
 		temp = particleRo1;
 		particleRo1 = particleRo;
 		particleRo = temp;
+
+		temp = p_count1;
+		p_count1 = p_count;
+		p_count = temp;
 
 		t += dt;
 		if (loopCounter % 50 == 0)
